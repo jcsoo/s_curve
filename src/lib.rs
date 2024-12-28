@@ -485,6 +485,7 @@ pub fn s_curve_generator(
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct SCurve {
     params: SCurveParameters,
     duration: f64,
@@ -492,9 +493,20 @@ pub struct SCurve {
 
 impl SCurve {
     pub fn generate(
-        constraints: SCurveConstraints,
-        start_conditions: SCurveStartConditions,
+        q0: f64,
+        q1: f64,
+        v0: f64,
+        v1: f64,
+        max_vel: f64,
+        max_accel: f64,
+        max_jerk: f64,
     ) -> Self {
+        let constraints = SCurveConstraints {
+            max_jerk,
+            max_acceleration: max_accel,
+            max_velocity: max_vel,
+        };
+        let start_conditions = SCurveStartConditions { q0, q1, v0, v1 };
         let input_parameters = SCurveInput {
             constraints,
             start_conditions,
