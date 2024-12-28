@@ -485,6 +485,48 @@ pub fn s_curve_generator(
     }
 }
 
+pub struct SCurve {
+    params: SCurveParameters,
+    duration: f64,
+}
+
+impl SCurve {
+    pub fn generate(
+        constraints: SCurveConstraints,
+        start_conditions: SCurveStartConditions,
+    ) -> Self {
+        let input_parameters = SCurveInput {
+            constraints,
+            start_conditions,
+        };
+        let times = input_parameters.calc_intervals();
+        SCurve {
+            params: SCurveParameters::new(&times, &input_parameters),
+            duration: times.total_duration(),
+        }
+    }
+
+    pub fn duration(&self) -> f64 {
+        self.duration
+    }
+
+    pub fn position_at(&self, t: f64) -> f64 {
+        eval_position(&self.params, t)
+    }
+
+    pub fn velocity_at(&self, t: f64) -> f64 {
+        eval_velocity(&self.params, t)
+    }
+
+    pub fn acceleration_at(&self, t: f64) -> f64 {
+        eval_acceleration(&self.params, t)
+    }
+
+    pub fn jerk_at(&self, t: f64) -> f64 {
+        eval_jerk(&self.params, t)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
