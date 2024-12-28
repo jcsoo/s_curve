@@ -348,7 +348,7 @@ impl SCurveInput {
     }
 }
 
-fn eval_position(p: &SCurveParameters, t: f64) -> f64 {
+pub fn eval_position(p: &SCurveParameters, t: f64) -> f64 {
     let times = &p.time_intervals;
     if t < 0. {
         return p.conditions.q0;
@@ -388,7 +388,7 @@ fn eval_position(p: &SCurveParameters, t: f64) -> f64 {
     }
 }
 
-fn eval_velocity(p: &SCurveParameters, t: f64) -> f64 {
+pub fn eval_velocity(p: &SCurveParameters, t: f64) -> f64 {
     let times = &p.time_intervals;
     if t < 0. {
         return p.conditions.v0;
@@ -413,7 +413,7 @@ fn eval_velocity(p: &SCurveParameters, t: f64) -> f64 {
     }
 }
 
-fn eval_acceleration(p: &SCurveParameters, t: f64) -> f64 {
+pub fn eval_acceleration(p: &SCurveParameters, t: f64) -> f64 {
     let times = &p.time_intervals;
     let dir = p.conditions.dir();
     if t < 0. {
@@ -437,7 +437,7 @@ fn eval_acceleration(p: &SCurveParameters, t: f64) -> f64 {
     }
 }
 
-fn eval_jerk(p: &SCurveParameters, t: f64) -> f64 {
+pub fn eval_jerk(p: &SCurveParameters, t: f64) -> f64 {
     let times = &p.time_intervals;
     let dir = p.conditions.dir();
     if t < times.t_j1 {
