@@ -489,6 +489,8 @@ pub fn s_curve_generator(
 pub struct SCurve {
     params: SCurveParameters,
     duration: f64,
+    t_scale: f64,
+    scale: f64,
 }
 
 impl SCurve {
@@ -501,6 +503,20 @@ impl SCurve {
         max_accel: f64,
         max_jerk: f64,
     ) -> Self {
+        SCurve::generate_scaled(q0, q1, v0, v1, max_vel, max_accel, max_jerk, 1.0, 1.0)
+    }
+
+    pub fn generate_scaled(
+        q0: f64,
+        q1: f64,
+        v0: f64,
+        v1: f64,
+        max_vel: f64,
+        max_accel: f64,
+        max_jerk: f64,
+        scale: f64,
+        t_scale: f64,
+    ) -> Self {
         let constraints = SCurveConstraints {
             max_jerk,
             max_acceleration: max_accel,
@@ -512,9 +528,12 @@ impl SCurve {
             start_conditions,
         };
         let times = input_parameters.calc_intervals();
+        let duration = times.total_duration();
         SCurve {
             params: SCurveParameters::new(&times, &input_parameters),
-            duration: times.total_duration(),
+            duration,
+            scale,
+            t_scale,
         }
     }
 
@@ -523,19 +542,19 @@ impl SCurve {
     }
 
     pub fn position_at(&self, t: f64) -> f64 {
-        eval_position(&self.params, t)
+        self.scale * eval_position(&self.params, t * self.t_scale)
     }
 
     pub fn velocity_at(&self, t: f64) -> f64 {
-        eval_velocity(&self.params, t)
+        self.scale * eval_velocity(&self.params, t * self.t_scale)
     }
 
     pub fn acceleration_at(&self, t: f64) -> f64 {
-        eval_acceleration(&self.params, t)
+        self.scale * eval_acceleration(&self.params, t * self.t_scale)
     }
 
     pub fn jerk_at(&self, t: f64) -> f64 {
-        eval_jerk(&self.params, t)
+        self.scale * eval_jerk(&self.params, t * self.t_scale)
     }
 }
 
