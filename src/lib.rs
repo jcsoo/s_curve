@@ -53,7 +53,7 @@ pub enum Derivative {
 }
 
 /// Represents the different time intervals of the S-Curve
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct SCurveTimeIntervals {
     ///  time-interval in which the jerk is constant (j max or j min ) during the acceleration phase
     pub t_j1: f64,
@@ -78,7 +78,7 @@ impl SCurveTimeIntervals {
 }
 
 /// Represents the Start and End Positions of the S_Curve
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SCurveStartConditions {
     /// start position
     pub q0: f64,
@@ -117,7 +117,7 @@ impl SCurveStartConditions {
 }
 
 /// Struct which represents the final parametrization of the S-Curve
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SCurveParameters {
     /// tine intervals of the Trajectory
     pub time_intervals: SCurveTimeIntervals,
@@ -485,7 +485,7 @@ pub fn s_curve_generator(
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SCurve {
     params: SCurveParameters,
     duration: f64,
@@ -539,6 +539,10 @@ impl SCurve {
 
     pub fn duration(&self) -> f64 {
         self.duration
+    }
+
+    pub fn complete_at(&self, t: f64) -> bool {
+        t * self.t_scale >= self.duration
     }
 
     pub fn position_at(&self, t: f64) -> f64 {
