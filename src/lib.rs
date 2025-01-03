@@ -537,10 +537,17 @@ impl SCurve {
         }
     }
 
-    pub fn duration(&self) -> f64 {
+    /// Duration of the curve without time scaling
+    pub fn duration_unscaled(&self) -> f64 {
         self.duration
     }
 
+    /// Duration of the curve with time scaling
+    pub fn duration(&self) -> f64 {
+        self.duration / self.t_scale
+    }
+
+    /// Check if the curve is complete at a given time.
     pub fn complete_at(&self, t: f64) -> bool {
         t * self.t_scale >= self.duration
     }
@@ -550,22 +557,26 @@ impl SCurve {
     }
 
     pub fn velocity_at(&self, t: f64) -> f64 {
-        self.scale * eval_velocity(&self.params, t * self.t_scale)
+        self.scale * self.t_scale * eval_velocity(&self.params, t * self.t_scale)
     }
 
     pub fn acceleration_at(&self, t: f64) -> f64 {
-        self.scale * eval_acceleration(&self.params, t * self.t_scale)
+        self.scale * self.t_scale * self.t_scale * eval_acceleration(&self.params, t * self.t_scale)
     }
 
     pub fn jerk_at(&self, t: f64) -> f64 {
-        self.scale * eval_jerk(&self.params, t * self.t_scale)
+        self.scale
+            * self.t_scale
+            * self.t_scale
+            * self.t_scale
+            * eval_jerk(&self.params, t * self.t_scale)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        s_curve_generator, Derivative, SCurveConstraints, SCurveInput, SCurveParameters,
+        s_curve_generator, Derivative, SCurve, SCurveConstraints, SCurveInput, SCurveParameters,
         SCurveStartConditions,
     };
 
@@ -1333,5 +1344,143 @@ mod tests {
         };
 
         assert!(input.is_trajectory_feasible());
+    }
+
+    #[test]
+    fn time_scaling_doubles_duration() {
+        let constraints = SCurveConstraints {
+            max_jerk: 3.0,
+            max_acceleration: 2.0,
+            max_velocity: 3.0,
+        };
+        let start_conditions = SCurveStartConditions {
+            q0: 0.0,
+            q1: 10.0,
+            v0: 0.0,
+            v1: 0.0,
+        };
+
+        // Create unscaled curve
+        let s_curve = SCurve::generate(
+            start_conditions.q0,
+            start_conditions.q1,
+            start_conditions.v0,
+            start_conditions.v1,
+            constraints.max_velocity,
+            constraints.max_acceleration,
+            constraints.max_jerk,
+        );
+        let original_duration = s_curve.duration();
+        let final_pos = s_curve.position_at(original_duration);
+
+        // Create curve with doubled duration (t_scale = 0.5)
+        let scaled_curve = SCurve::generate_scaled(
+            start_conditions.q0,
+            start_conditions.q1,
+            start_conditions.v0,
+            start_conditions.v1,
+            constraints.max_velocity,
+            constraints.max_acceleration,
+            constraints.max_jerk,
+            1.0, // position scale
+            0.5, // time scale
+        );
+
+        assert!((scaled_curve.duration() - 2.0 * original_duration).abs() < 1e-10);
+        assert!((scaled_curve.position_at(2.0 * original_duration) - final_pos).abs() < 1e-10);
+    }
+
+    #[test]
+    fn time_scaling_scales_velocity() {
+        let constraints = SCurveConstraints {
+            max_jerk: 3.0,
+            max_acceleration: 2.0,
+            max_velocity: 3.0,
+        };
+        let start_conditions = SCurveStartConditions {
+            q0: 0.0,
+            q1: 10.0,
+            v0: 0.0,
+            v1: 0.0,
+        };
+
+        // Create unscaled curve
+        let s_curve = SCurve::generate(
+            start_conditions.q0,
+            start_conditions.q1,
+            start_conditions.v0,
+            start_conditions.v1,
+            constraints.max_velocity,
+            constraints.max_acceleration,
+            constraints.max_jerk,
+        );
+
+        // Create curve with halved velocities (t_scale = 0.5)
+        let scaled_curve = SCurve::generate_scaled(
+            start_conditions.q0,
+            start_conditions.q1,
+            start_conditions.v0,
+            start_conditions.v1,
+            constraints.max_velocity,
+            constraints.max_acceleration,
+            constraints.max_jerk,
+            1.0, // position scale
+            0.5, // time scale
+        );
+
+        // Check velocity at several points
+        let test_times = vec![0.5, 1.0, 1.5, 2.0];
+        for t in test_times {
+            let unscaled_vel = s_curve.velocity_at(t);
+            let scaled_vel = scaled_curve.velocity_at(2.0 * t);
+            assert!((scaled_vel - 0.5 * unscaled_vel).abs() < 1e-10);
+        }
+    }
+
+    #[test]
+    fn time_scaling_scales_acceleration() {
+        let constraints = SCurveConstraints {
+            max_jerk: 3.0,
+            max_acceleration: 2.0,
+            max_velocity: 3.0,
+        };
+        let start_conditions = SCurveStartConditions {
+            q0: 0.0,
+            q1: 10.0,
+            v0: 0.0,
+            v1: 0.0,
+        };
+
+        // Create unscaled curve
+        let s_curve = SCurve::generate(
+            start_conditions.q0,
+            start_conditions.q1,
+            start_conditions.v0,
+            start_conditions.v1,
+            constraints.max_velocity,
+            constraints.max_acceleration,
+            constraints.max_jerk,
+        );
+
+        // Create curve with quartered accelerations (t_scale = 0.5)
+        let scaled_curve = SCurve::generate_scaled(
+            start_conditions.q0,
+            start_conditions.q1,
+            start_conditions.v0,
+            start_conditions.v1,
+            constraints.max_velocity,
+            constraints.max_acceleration,
+            constraints.max_jerk,
+            1.0, // position scale
+            0.5, // time scale
+        );
+
+        // Check acceleration at several points
+        let test_times = vec![0.5, 1.0, 1.5, 2.0];
+        for t in test_times {
+            let unscaled_acc = s_curve.acceleration_at(t);
+            let scaled_acc = scaled_curve.acceleration_at(2.0 * t);
+            assert!((scaled_acc - 0.25 * unscaled_acc).abs() < 1e-10);
+        }
     }
 }
